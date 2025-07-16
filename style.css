@@ -21,3 +21,11 @@ th, td {
 th {
     background-color: #f2f2f2;
 }
+
+button {
+    margin: 15px 0px;
+    display: none;
+    background-color: white;
+    border-style: solid;
+    color: black;
+}

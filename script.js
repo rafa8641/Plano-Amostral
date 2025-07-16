@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', function () {
     const municipioSelect = document.getElementById('municipioSelect');
     const planoAmostralDiv = document.getElementById('planoAmostral');
+    let dadosExportacao = [];
 
     // Carregar dados do JSON
     fetch('dados.json')
@@ -38,6 +39,8 @@ function calculateSampleSize(N, e, z = 1.96, p = 0.5) {
 
     function generatePlanoAmostral(locais) {
         planoAmostralDiv.innerHTML = '';
+        dadosExportacao = [];
+
         if (locais.length === 0) {
             planoAmostralDiv.textContent = 'Nenhum local encontrado para o município selecionado.';
             return;
@@ -73,6 +76,8 @@ function calculateSampleSize(N, e, z = 1.96, p = 0.5) {
         let totalEntrevistas5 = 0;
         let totalEntrevistas6 = 0;
 
+        const linhasExport = [];
+
         sortedBairros.forEach(([bairro, votantes]) => {
             const entrevistas4 = Math.round((votantes * calculateSampleSize(totalVotantes, errosRelativos[0])) / totalVotantes);
             const entrevistas5 = Math.round((votantes * calculateSampleSize(totalVotantes, errosRelativos[1])) / totalVotantes);
@@ -83,19 +88,22 @@ function calculateSampleSize(N, e, z = 1.96, p = 0.5) {
             totalEntrevistas6 += entrevistas6;
 
             const row = document.createElement('tr');
-            const fields = [
-                bairro, 
-                votantes, 
-                entrevistas4, 
-                entrevistas5, 
-                entrevistas6
-            ];
+            const fields = [bairro, votantes, entrevistas4, entrevistas5, entrevistas6];
             fields.forEach(field => {
                 const td = document.createElement('td');
                 td.textContent = field;
                 row.appendChild(td);
             });
             table.appendChild(row);
+
+            // Para exportação
+            linhasExport.push({
+                'Bairro': bairro,
+                'Votantes': votantes,
+                'Entrevistas (4%)': entrevistas4,
+                'Entrevistas (5%)': entrevistas5,
+                'Entrevistas (6%)': entrevistas6
+            });
         });
 
         const totalRow = document.createElement('tr');
@@ -113,6 +121,30 @@ function calculateSampleSize(N, e, z = 1.96, p = 0.5) {
         });
         table.appendChild(totalRow);
 
+        linhasExport.push({
+            'Bairro': 'Total',
+            'Votantes': totalVotantes,
+            'Entrevistas (4%)': totalEntrevistas4,
+            'Entrevistas (5%)': totalEntrevistas5,
+            'Entrevistas (6%)': totalEntrevistas6
+        });
+
+        dadosExportacao = linhasExport;
+        document.getElementById('btnDownload').style.display = 'inline-block';
+
         planoAmostralDiv.appendChild(table);
+    }
+
+    const btnDownload = document.getElementById('btnDownload');
+    if (btnDownload) {
+        btnDownload.addEventListener('click', function () {
+            if (!dadosExportacao || dadosExportacao.length === 0) return;
+
+            const worksheet = XLSX.utils.json_to_sheet(dadosExportacao);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Plano Amostral");
+
+            XLSX.writeFile(workbook, "plano_amostral.xlsx");
+        });
     }
 });
